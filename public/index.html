@@ -292,7 +292,7 @@ async function runAnalysis() {
     }
   } catch(e) {
     document.getElementById('result-area').innerHTML =
-      `<div class="empty">❌ Notion 연결 실패: ${e.message}</div>`;
+      `<div class="empty" style="white-space:pre-wrap;text-align:left;padding:20px;font-size:12px">❌ 오류 상세: ${e.message}\n\nStack: ${e.stack||''}</div>`;
     return;
   }
 
