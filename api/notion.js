@@ -15,6 +15,7 @@ export default async function handler(req, res) {
     let allResults = [];
     let hasMore = true;
     let startCursor = undefined;
+    const seenIds = new Set();
 
     while (hasMore) {
       const body = { page_size: 100 };
@@ -34,7 +35,14 @@ export default async function handler(req, res) {
       const data = await response.json();
       if (!response.ok) return res.status(response.status).json(data);
 
-      allResults = allResults.concat(data.results || []);
+      // 중복 제거
+      for (const page of (data.results || [])) {
+        if (!seenIds.has(page.id)) {
+          seenIds.add(page.id);
+          allResults.push(page);
+        }
+      }
+
       hasMore = data.has_more;
       startCursor = data.next_cursor;
     }
