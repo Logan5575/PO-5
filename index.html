@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PO 커버리지 대시보드</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f7f6f3;--bg3:#f1f0ec;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9b9b9b;
+  --border:#e5e4e0;--border2:#d1d0cc;
+  --green-bg:#eaf3de;--green-txt:#3b6d11;
+  --amber-bg:#faeeda;--amber-txt:#854f0b;
+  --red-bg:#fcebeb;--red-txt:#a32d2d;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;min-height:100vh}
+.app{max-width:960px;margin:0 auto;padding:20px 16px}
+h1{font-size:17px;font-weight:600;margin-bottom:2px}
+.subtitle{font-size:12px;color:var(--text3);margin-bottom:16px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.metric{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.metric-val{font-size:20px;font-weight:600;color:var(--text);line-height:1.1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{font-size:13px;padding:8px 14px;cursor:pointer;color:var(--text2);border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:none}
+.tab.active{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:12px}
+.section-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:10px}
+select{width:100%;height:34px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;padding:0 10px;outline:none}
+.btn{height:34px;padding:0 16px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:var(--bg);color:var(--text)}
+.btn:hover{background:var(--bg2)}
+.btn-primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn-primary:hover{opacity:0.85}
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.size-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
+.size-cell{border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 4px;text-align:center}
+.size-cell .sz{font-size:10px;color:var(--text3);margin-bottom:3px}
+.size-cell input{width:100%;border:none;background:transparent;text-align:center;font-size:12px;font-weight:500;color:var(--text);padding:0;height:auto;outline:none}
+.divider{height:0.5px;background:var(--border);margin:14px 0}
+.progress-wrap{margin-bottom:16px}
+.progress-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px}
+.progress-meta strong{color:var(--text)}
+.progress-bg{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.progress-fill{height:5px;border-radius:3px;transition:width 0.6s ease}
+table.tbl{width:100%;border-collapse:collapse;font-size:12px}
+table.tbl th{font-size:11px;font-weight:500;color:var(--text3);text-align:left;padding:5px 8px;border-bottom:0.5px solid var(--border)}
+table.tbl td{padding:6px 8px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+table.tbl tr:last-child td{border-bottom:none}
+table.tbl tr:hover td{background:var(--bg2)}
+.badge{display:inline-flex;align-items:center;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.badge-ok{background:var(--green-bg);color:var(--green-txt)}
+.badge-partial{background:var(--amber-bg);color:var(--amber-txt)}
+.badge-no{background:var(--red-bg);color:var(--red-txt)}
+.mono{font-family:'SF Mono',Menlo,monospace;font-size:11px}
+.stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px}
+.stock-cell{border-radius:var(--radius);padding:8px 6px;text-align:center;border:0.5px solid transparent}
+.stock-cell .sz{font-size:10px;color:var(--text3);margin-bottom:3px}
+.stock-cell .qty{font-size:14px;font-weight:600}
+.stock-ok{background:var(--green-bg);border-color:#c0dd97}.stock-ok .qty{color:var(--green-txt)}
+.stock-low{background:var(--amber-bg);border-color:#fac775}.stock-low .qty{color:var(--amber-txt)}
+.stock-zero{background:var(--red-bg);border-color:#f7c1c1}.stock-zero .qty{color:var(--red-txt)}
+.empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
+.scroll-x{overflow-x:auto}
+.loading{display:flex;align-items:center;gap:8px;padding:20px;color:var(--text2);font-size:13px}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--text2);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:4px;background:var(--bg2);color:var(--text2)}
+.info-bar{font-size:12px;color:var(--text3);background:var(--bg2);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px}
+.info-bar strong{color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>📦 PO 커버리지 대시보드</h1>
+  <p class="subtitle">Notion 실시간 연동 · 수출완료 PO 자동 제외 · 현재고 + 일일생산 합산 분석</p>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">분석 색상</div>
+      <div class="metric-val" id="m-color">—</div>
+      <div class="metric-sub" id="m-color-sub">색상 선택 후 분석</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">현재고 합계</div>
+      <div class="metric-val" id="m-stock">—</div>
+      <div class="metric-sub">기존재고 + 생산량</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">대상 PO</div>
+      <div class="metric-val" id="m-po-total">—</div>
+      <div class="metric-sub">수출완료 제외</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">커버 가능 PO</div>
+      <div class="metric-val" id="m-covered">—</div>
+      <div class="metric-sub" id="m-covered-sub">—</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('input')">① 재고 입력</button>
+    <button class="tab" onclick="switchTab('result')">② PO 커버 분석</button>
+    <button class="tab" onclick="switchTab('stock')">③ 잔여 재고</button>
+  </div>
+
+  <div id="tab-input" class="panel active">
+    <div class="card">
+      <div class="section-label">색상 선택</div>
+      <select id="sel-color" onchange="onColorChange()">
+        <option value="">— 색상 선택 —</option>
+        <option value="Black | Apollo">Black | Apollo</option>
+        <option value="Flurry | Verdite">Flurry | Verdite</option>
+        <option value="Lily | Limelight">Lily | Limelight</option>
+        <option value="Black | Black">Black | Black</option>
+        <option value="Lucent | Black">Lucent | Black</option>
+        <option value="White | Cherrywood">White | Cherrywood</option>
+        <option value="White | Lucent">White | Lucent</option>
+        <option value="Pixie | Lucent">Pixie | Lucent</option>
+        <option value="Limelight | Bloom">Limelight | Bloom</option>
+        <option value="Pixie | Pixie">Pixie | Pixie</option>
+      </select>
+    </div>
+
+    <div id="stock-section" style="display:none">
+      <div class="card">
+        <div class="section-label">기존 재고 — Notion 재고 현황 DB 실시간 연동</div>
+        <div id="existing-grid" class="size-grid"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">금일 생산량 추가 입력</div>
+        <div id="prod-grid" class="size-grid"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="runAnalysis()">분석 실행 →</button>
+          <button class="btn" onclick="reloadStock()">재고 새로고침 ↺</button>
+          <button class="btn" onclick="clearProd()">생산량 초기화</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-result" class="panel">
+    <div id="result-area" class="card">
+      <div class="empty">① 재고 입력 탭에서 색상을 선택하고 분석을 실행하세요</div>
+    </div>
+  </div>
+
+  <div id="tab-stock" class="panel">
+    <div id="stock-area" class="card">
+      <div class="empty">분석 실행 후 잔여 재고가 표시됩니다</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DB_PO    = '1f9e0b3e-56fe-4173-b055-d50d9e380a1b';
+const DB_STOCK = '9161f893a3904ca094dfdb7fad9481f0';
+const SIZES = ['3.5','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5','10','10.5','11','11.5','12','12.5','13','14'];
+
+// Vercel API 엔드포인트 (같은 도메인이므로 CORS 없음)
+async function notionQuery(dbId, filter) {
+  const res = await fetch('/api/notion', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({dbId, filter})
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'API 오류');
+  return data.results || [];
+}
+
+function getProp(page, key) {
+  const p = page.properties[key];
+  if (!p) return null;
+  if (p.type === 'title') return p.title.map(t=>t.plain_text).join('');
+  if (p.type === 'rich_text') return p.rich_text.map(t=>t.plain_text).join('');
+  if (p.type === 'number') return p.number;
+  if (p.type === 'select') return p.select?.name || null;
+  if (p.type === 'date') return p.date?.start || null;
+  return null;
+}
+
+function switchTab(name) {
+  ['input','result','stock'].forEach((n,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n===name);
+    document.getElementById('tab-'+n).classList.toggle('active', n===name);
+  });
+}
+
+function showLoading(id, msg) {
+  document.getElementById(id).innerHTML =
+    `<div class="loading"><div class="spinner"></div>${msg}</div>`;
+}
+
+async function onColorChange() {
+  const color = document.getElementById('sel-color').value;
+  document.getElementById('stock-section').style.display = color ? 'block' : 'none';
+  if (!color) return;
+  document.getElementById('m-color').textContent = color;
+  await reloadStock();
+}
+
+async function reloadStock() {
+  const color = document.getElementById('sel-color').value;
+  if (!color) return;
+
+  const existGrid = document.getElementById('existing-grid');
+  existGrid.innerHTML = `<div class="loading" style="grid-column:1/-1"><div class="spinner"></div>Notion 재고 불러오는 중...</div>`;
+
+  let stockData = {};
+  try {
+    const pages = await notionQuery(DB_STOCK, {
+      property: '색상_제품명',
+      rich_text: {equals: color}
+    });
+
+    if (pages.length > 0) {
+      SIZES.forEach(s => {
+        stockData[s] = getProp(pages[0], s) || 0;
+      });
+      document.getElementById('m-color-sub').textContent = `Notion 재고 연동됨 ✓`;
+    } else {
+      document.getElementById('m-color-sub').textContent = '재고 DB에 데이터 없음 (수동 입력)';
+    }
+  } catch(e) {
+    document.getElementById('m-color-sub').textContent = `연결 오류: ${e.message}`;
+  }
+
+  renderInputGrids(stockData);
+}
+
+function renderInputGrids(stockData) {
+  document.getElementById('existing-grid').innerHTML =
+    SIZES.map(s=>`
+      <div class="size-cell">
+        <div class="sz">${s}</div>
+        <input type="number" id="ex-${s}" value="${stockData[s]||0}" min="0">
+      </div>`).join('');
+  document.getElementById('prod-grid').innerHTML =
+    SIZES.map(s=>`
+      <div class="size-cell">
+        <div class="sz">${s}</div>
+        <input type="number" id="pr-${s}" value="0" min="0">
+      </div>`).join('');
+}
+
+function clearProd() {
+  SIZES.forEach(s=>{ const el=document.getElementById('pr-'+s); if(el) el.value=0; });
+}
+
+function getStock() {
+  const s={};
+  SIZES.forEach(sz=>{
+    s[sz] = (parseFloat(document.getElementById('ex-'+sz)?.value)||0)
+           + (parseFloat(document.getElementById('pr-'+sz)?.value)||0);
+  });
+  return s;
+}
+
+async function runAnalysis() {
+  const color = document.getElementById('sel-color').value;
+  if (!color) { alert('색상을 선택하세요'); return; }
+
+  const stock = getStock();
+  const totalStock = SIZES.reduce((a,s)=>a+(stock[s]||0), 0);
+  document.getElementById('m-stock').textContent = totalStock.toLocaleString();
+
+  switchTab('result');
+  showLoading('result-area', 'Notion PO 데이터 불러오는 중...');
+
+  let pages = [];
+  try {
+    pages = await notionQuery(DB_PO, {
+      and: [
+        {property:'색상', rich_text:{equals: color}},
+        {property:'PO상태', select:{does_not_equal:'수출완료'}}
+      ]
+    });
+  } catch(e) {
+    document.getElementById('result-area').innerHTML =
+      `<div class="empty">❌ Notion 연결 실패: ${e.message}</div>`;
+    return;
+  }
+
+  const pos = pages.map(p => {
+    const obj = {
+      po:     getProp(p,'PO번호'),
+      dest:   getProp(p,'목적지'),
+      date:   getProp(p,'Ship Date'),
+      status: getProp(p,'PO상태'),
+      qty:    getProp(p,'총수량') || 0,
+    };
+    SIZES.forEach(s => { obj[s] = getProp(p, s) || 0; });
+    return obj;
+  }).filter(p => p.po && p.date)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  document.getElementById('m-po-total').textContent = pos.length;
+
+  const rem = {...stock};
+  const results = [];
+  let covered = 0;
+
+  pos.forEach(po => {
+    let canFull = true;
+    const deficit = [];
+    SIZES.forEach(s => {
+      const need = po[s] || 0;
+      if (!need) return;
+      if (rem[s] < need) {
+        canFull = false;
+        deficit.push(`${s}(${need - Math.max(0, rem[s])}부족)`);
+      }
+    });
+    let status;
+    if (canFull) {
+      status = 'full'; covered++;
+      SIZES.forEach(s => { rem[s] = Math.max(0, rem[s] - (po[s]||0)); });
+    } else {
+      const hasAny = SIZES.some(s => (po[s]||0) > 0 && rem[s] > 0);
+      status = hasAny ? 'partial' : 'none';
+    }
+    results.push({po, status, deficit});
+  });
+
+  document.getElementById('m-covered').textContent = `${covered}/${pos.length}`;
+  const nextShort = results.find(r => r.status !== 'full');
+  document.getElementById('m-covered-sub').textContent = nextShort
+    ? `다음 미충족: ${nextShort.po.po}`
+    : pos.length > 0 ? '전체 커버 가능 ✓' : '해당 PO 없음';
+
+  renderResults(results, color, covered, pos.length);
+  renderStock(rem, stock);
+}
+
+function renderResults(results, color, covered, total) {
+  const pct = total ? Math.round(covered/total*100) : 0;
+  const barColor = pct>=80 ? '#639922' : pct>=50 ? '#BA7517' : '#A32D2D';
+
+  let html = `
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>${color} · 수출완료 제외 · Ship Date 순</span>
+        <strong>${covered}/${total} PO (${pct}%)</strong>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+    </div>
+    <div class="scroll-x">
+    <table class="tbl">
+      <thead><tr>
+        <th>PO번호</th><th>목적지</th><th>Ship Date</th><th>PO상태</th>
+        <th style="text-align:right">수량</th><th>커버</th><th>부족 사이즈</th>
+      </tr></thead><tbody>`;
+
+  results.forEach(({po, status, deficit}) => {
+    const badge = status==='full'
+      ? `<span class="badge badge-ok">✓ 커버</span>`
+      : status==='partial'
+      ? `<span class="badge badge-partial">△ 부분</span>`
+      : `<span class="badge badge-no">✕ 불가</span>`;
+    const def = deficit.length
+      ? `<span style="font-size:11px;color:var(--text3)">${deficit.slice(0,5).join(' · ')}${deficit.length>5?' 외 '+(deficit.length-5)+'건':''}</span>`
+      : '<span style="font-size:11px;color:var(--text3)">—</span>';
+    html += `<tr>
+      <td class="mono">${po.po||''}</td>
+      <td>${po.dest||''}</td>
+      <td>${po.date||''}</td>
+      <td><span class="tag">${po.status||''}</span></td>
+      <td style="text-align:right">${(po.qty||0).toLocaleString()}</td>
+      <td>${badge}</td>
+      <td>${def}</td>
+    </tr>`;
+  });
+
+  if (!results.length) {
+    html += `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">해당 색상의 활성 PO가 없습니다</td></tr>`;
+  }
+
+  html += `</tbody></table></div>`;
+  document.getElementById('result-area').innerHTML = html;
+}
+
+function renderStock(rem, orig) {
+  const total = SIZES.reduce((a,s)=>a+(rem[s]||0), 0);
+  let html = `<div style="font-size:12px;color:var(--text2);margin-bottom:12px">
+    PO 충당 후 잔여 재고 — 합계: <strong style="color:var(--text)">${total.toLocaleString()}</strong>
+  </div><div class="stock-grid">`;
+  SIZES.forEach(s => {
+    const qty = rem[s]||0, o = orig[s]||1;
+    const cls = qty===0 ? 'stock-zero' : qty < o*0.3 ? 'stock-low' : 'stock-ok';
+    html += `<div class="stock-cell ${cls}"><div class="sz">${s}</div><div class="qty">${qty.toLocaleString()}</div></div>`;
+  });
+  html += `</div>`;
+  document.getElementById('stock-area').innerHTML = html;
+}
+</script>
+</body>
+</html>
