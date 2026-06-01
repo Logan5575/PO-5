@@ -162,7 +162,7 @@ const SIZES = ['3.5','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5'
 
 // Vercel API 엔드포인트 (같은 도메인이므로 CORS 없음)
 async function notionQuery(dbId, filter) {
-  const res = await fetch('/api/notion', {
+  const res = await fetch('/api/notion.js', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({dbId, filter})
