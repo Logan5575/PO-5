@@ -273,12 +273,23 @@ async function runAnalysis() {
 
   let pages = [];
   try {
+    // 먼저 색상만으로 필터 테스트
     pages = await notionQuery(DB_PO, {
       and: [
         {property:'색상', rich_text:{equals: color}},
         {property:'PO상태', select:{does_not_equal:'수출완료'}}
       ]
     });
+    // 결과 없으면 필터 없이 전체 조회해서 디버그
+    if (pages.length === 0) {
+      const allPages = await notionQuery(DB_PO, null);
+      const sample = allPages.slice(0,3).map(p => {
+        const colorVal = p.properties['색상'];
+        const statusVal = p.properties['PO상태'];
+        return `색상타입:${colorVal?.type} 값:${colorVal?.rich_text?.[0]?.plain_text || colorVal?.select?.name || '없음'} | 상태타입:${statusVal?.type} 값:${statusVal?.select?.name || statusVal?.rich_text?.[0]?.plain_text || '없음'}`;
+      });
+      throw new Error(`색상 필터 결과 없음. 전체${allPages.length}건 샘플: ${sample.join(' / ')}`);
+    }
   } catch(e) {
     document.getElementById('result-area').innerHTML =
       `<div class="empty">❌ Notion 연결 실패: ${e.message}</div>`;
