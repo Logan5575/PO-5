@@ -222,10 +222,12 @@ async function reloadStock() {
       SIZES.forEach(s => { stockData[s] = getProp(pages[0], s) || 0; });
     }
 
-    // 일일생산 DB 조회 - 색상_제품명 정확히 매칭, 전체 날짜 누적 합산
-    const prodPages = await notionQuery(DB_PROD, {
-      property: '색상_제품명',
-      rich_text: {equals: color}
+    // 일일생산 DB 조회 - 전체 조회 후 JS에서 색상_제품명 필터링
+    const allProdPages = await notionQuery(DB_PROD, null);
+    const prodPages = allProdPages.filter(p => {
+      const c = p.properties['색상_제품명'];
+      const val = c?.rich_text?.[0]?.plain_text || c?.title?.[0]?.plain_text || '';
+      return val === color;
     });
 
     let prodTotal = {};
