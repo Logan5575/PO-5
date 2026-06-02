@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Ship Date 수정</title>
+<style>
+body{font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto}
+.log{background:#f5f5f5;padding:10px;border-radius:8px;height:400px;overflow-y:auto;font-size:12px;margin-top:10px}
+button{padding:10px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+button:disabled{opacity:0.5}
+.ok{color:green}.err{color:red}.info{color:#666}
+</style>
+</head>
+<body>
+<h2>Ship Date 일괄 수정</h2>
+<p>총 49건의 PO Ship Date를 정확한 날짜로 수정합니다.</p>
+<button id="btn" onclick="run()">수정 시작</button>
+<div class="log" id="log"></div>
+<script>
+const FIXES = [{"po": "PO010106008", "color": "Limelight | Bloom", "current": "2026-01-12", "correct": "2026-03-03"}, {"po": "PO380000506", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380000508", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380000510", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380000511", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380000512", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380000513", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380006777", "color": "Black | Apollo", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380006777", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380006781", "color": "Black | Apollo", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380006781", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380006782", "color": "Black | Apollo", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380006782", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380014780", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380014780", "color": "Lily | Limelight", "current": "2026-05-15", "correct": "2026-06-02"}, {"po": "PO380014781", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}, {"po": "PO380014782", "color": "Flurry | Verdite", "current": "2026-05-20", "correct": "2026-06-15"}, {"po": "PO380014784", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380014785", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380014792", "color": "Flurry | Verdite", "current": "2026-05-20", "correct": "2026-06-15"}, {"po": "PO380014793", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}, {"po": "PO380014814", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}, {"po": "PO380015098", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}, {"po": "PO380024861", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-05-15"}, {"po": "PO380024865", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-05-15"}, {"po": "PO380024880", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-05-15"}, {"po": "PO380024882", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-05-15"}, {"po": "PO380024884", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-06-12"}, {"po": "PO380028015", "color": "Limelight | Bloom", "current": "2026-01-25", "correct": "2026-02-06"}, {"po": "PO380034111", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034111", "color": "Pixie | Lucent", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034112", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034112", "color": "Pixie | Lucent", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034113", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034113", "color": "Pixie | Lucent", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034114", "color": "Lily | Limelight", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380034114", "color": "Pixie | Lucent", "current": "2026-05-13", "correct": "2026-08-10"}, {"po": "PO380044660", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO380044661", "color": "Black | Apollo", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO380044661", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO38OM000141", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO38OM000142", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO38OM000143", "color": "Black | Apollo", "current": "2026-04-30", "correct": "2026-06-15"}, {"po": "PO38OM000144", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO38OM000145", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO38OM000146", "color": "Flurry | Verdite", "current": "2026-05-15", "correct": "2026-06-15"}, {"po": "PO38OM000700", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}, {"po": "PO38OM000701", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}, {"po": "PO38OM000702", "color": "Lily | Limelight", "current": "2026-06-15", "correct": "2026-06-22"}];
+const DB_ID = '7cf548d1d20245e0a4c3547040c7524d';
+
+function log(msg, cls='info') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function queryPO(poNum, color) {
+  const res = await fetch('/api/notion.js', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      dbId: DB_ID,
+      filter: {
+        and: [
+          {property: 'PO번호', title: {equals: poNum}},
+          {property: '색상', rich_text: {equals: color}}
+        ]
+      }
+    })
+  });
+  const data = await res.json();
+  return data.results || [];
+}
+
+async function updatePage(pageId, newDate) {
+  const res = await fetch('/api/notion.js', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      action: 'update',
+      pageId,
+      properties: {
+        'date:Ship Date:is_datetime': 0,
+        'date:Ship Date:start': newDate
+      }
+    })
+  });
+  return res.json();
+}
+
+async function run() {
+  document.getElementById('btn').disabled = true;
+  log('수정 시작...', 'info');
+  let success = 0, fail = 0;
+
+  for (const item of FIXES) {
+    try {
+      const pages = await queryPO(item.po, item.color);
+      if (pages.length === 0) {
+        log(`❌ ${item.po} | ${item.color} — 찾을 수 없음`, 'err');
+        fail++; continue;
+      }
+      for (const page of pages) {
+        await updatePage(page.id, item.correct);
+      }
+      log(`✓ ${item.po} | ${item.color} | ${item.current} → ${item.correct}`, 'ok');
+      success++;
+    } catch(e) {
+      log(`❌ ${item.po} — ${e.message}`, 'err');
+      fail++;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  log(`완료! 성공: ${success}, 실패: ${fail}`, 'info');
+  document.getElementById('btn').disabled = false;
+}
+</script>
+</body>
+</html>
