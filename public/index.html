@@ -70,6 +70,18 @@ table.tbl tr:hover td{background:var(--bg2)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:4px;background:var(--bg2);color:var(--text2)}
 .info-bar{font-size:12px;color:var(--text3);background:var(--bg2);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px}
+.po-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden}
+.po-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:6px}
+.po-card-body{padding:10px 14px}
+.po-card-footer{padding:6px 14px;border-top:0.5px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sz-grid{display:flex;flex-wrap:wrap;gap:5px}
+.sz-cell{display:flex;flex-direction:column;align-items:center;border-radius:6px;padding:5px 7px;min-width:42px;border:0.5px solid transparent}
+.sz-lbl{font-size:10px;margin-bottom:2px}
+.sz-val{font-size:12px;font-weight:500}
+.sz-ok{background:#eaf3de;border-color:#c0dd97}.sz-ok .sz-lbl{color:#3b6d11}.sz-ok .sz-val{color:#27500a}
+.sz-no{background:#fcebeb;border-color:#f7c1c1}.sz-no .sz-lbl{color:#a32d2d}.sz-no .sz-val{color:#791f1f}
+.sz-zero{background:var(--bg2);border-color:var(--border)}.sz-zero .sz-lbl{color:var(--text3)}.sz-zero .sz-val{color:var(--text3)}
+.short-tag{font-size:11px;background:#fcebeb;color:#a32d2d;padding:2px 8px;border-radius:4px}
 .info-bar strong{color:var(--text2)}
 </style>
 </head>
@@ -361,11 +373,15 @@ async function runAnalysis() {
   pos.forEach(po => {
     let canFull = true;
     const deficit = [];
+    const sizeStatus = {};
     SIZES.forEach(s => {
       const need = po[s] || 0;
-      if (!need) return;
-      if (rem[s] < need) {
+      if (!need) { sizeStatus[s] = true; return; }
+      if (rem[s] >= need) {
+        sizeStatus[s] = true;
+      } else {
         canFull = false;
+        sizeStatus[s] = false;
         deficit.push(`${s}(${need - Math.max(0, rem[s])}부족)`);
       }
     });
@@ -377,7 +393,7 @@ async function runAnalysis() {
       const hasAny = SIZES.some(s => (po[s]||0) > 0 && rem[s] > 0);
       status = hasAny ? 'partial' : 'none';
     }
-    results.push({po, status, deficit});
+    results.push({po, status, deficit, sizeStatus});
   });
 
   document.getElementById('m-covered').textContent = `${covered}/${pos.length}`;
@@ -404,38 +420,60 @@ function renderResults(results, color, covered, total) {
         <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
       </div>
     </div>
-    <div class="scroll-x">
-    <table class="tbl">
-      <thead><tr>
-        <th>PO번호</th><th>목적지</th><th>Ship Date</th><th>PO상태</th>
-        <th style="text-align:right">수량</th><th>커버</th><th>부족 사이즈</th>
-      </tr></thead><tbody>`;
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;font-size:12px;color:var(--text2)">
+      <span style="font-weight:500;color:var(--text)">범례</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#eaf3de;border:0.5px solid #c0dd97;display:inline-block"></span>커버 가능</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#fcebeb;border:0.5px solid #f7c1c1;display:inline-block"></span>재고 부족</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--bg2);border:0.5px solid var(--border);display:inline-block"></span>해당 없음</span>
+    </div>`;
 
-  results.forEach(({po, status, deficit}) => {
+  if (!results.length) {
+    html += `<div style="text-align:center;padding:30px;color:var(--text3)">해당 색상의 활성 PO가 없습니다</div>`;
+  }
+
+  results.forEach(({po, status, deficit, sizeStatus}) => {
     const badge = status==='full'
       ? `<span class="badge badge-ok">✓ 커버</span>`
       : status==='partial'
       ? `<span class="badge badge-partial">△ 부분</span>`
       : `<span class="badge badge-no">✕ 불가</span>`;
-    const def = deficit.length
-      ? `<span style="font-size:11px;color:var(--text3)">${deficit.slice(0,5).join(' · ')}${deficit.length>5?' 외 '+(deficit.length-5)+'건':''}</span>`
-      : '<span style="font-size:11px;color:var(--text3)">—</span>';
-    html += `<tr>
-      <td class="mono">${po.po||''}</td>
-      <td>${po.dest||''}</td>
-      <td>${po.date||''}</td>
-      <td><span class="tag">${po.status||''}</span></td>
-      <td style="text-align:right">${(po.qty||0).toLocaleString()}</td>
-      <td>${badge}</td>
-      <td>${def}</td>
-    </tr>`;
+
+    html += `<div class="po-card">
+      <div class="po-card-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="mono">${po.po||''}</span>
+          <span style="font-size:12px;color:var(--text2)">${po.dest||''}</span>
+          <span style="font-size:12px;color:var(--text2)">${po.date||''}</span>
+          <span class="tag">${po.status||''}</span>
+          ${badge}
+        </div>
+        <span style="font-size:12px;color:var(--text2)">${(po.qty||0).toLocaleString()}켤레</span>
+      </div>
+      <div class="po-card-body">
+        <div class="sz-grid">`;
+
+    SIZES.forEach(s => {
+      const qty = po[s] || 0;
+      if (qty === 0) {
+        html += `<div class="sz-cell sz-zero"><div class="sz-lbl">${s}</div><div class="sz-val">—</div></div>`;
+      } else {
+        const ok = sizeStatus[s];
+        html += `<div class="sz-cell ${ok ? 'sz-ok' : 'sz-no'}"><div class="sz-lbl">${s}</div><div class="sz-val">${qty}</div></div>`;
+      }
+    });
+
+    html += `</div></div>`;
+
+    if (deficit.length) {
+      html += `<div class="po-card-footer">
+        <span style="font-size:12px;color:var(--text2)">부족 사이즈:</span>
+        ${deficit.map(d=>`<span class="short-tag">${d}</span>`).join('')}
+      </div>`;
+    }
+
+    html += `</div>`;
   });
 
-  if (!results.length) {
-    html += `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">해당 색상의 활성 PO가 없습니다</td></tr>`;
-  }
-
-  html += `</tbody></table></div>`;
   document.getElementById('result-area').innerHTML = html;
 }
 
