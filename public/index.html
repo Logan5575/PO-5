@@ -380,6 +380,15 @@ async function runAnalysis() {
     });
 
   document.getElementById('m-po-total').textContent = pos.length;
+  // 디버그: 첫 PO의 priority, aql_note 확인
+  if (pages.length > 0) {
+    const fp = pages[0];
+    const prio = fp.properties['우선순위'];
+    const note = fp.properties['_비고'];
+    console.log('첫PO 우선순위:', JSON.stringify(prio));
+    console.log('첫PO _비고:', JSON.stringify(note));
+    console.log('첫PO po:', pos[0]?.po, 'priority:', pos[0]?.priority, 'aql:', pos[0]?.aql_note);
+  }
 
   const rem = {...stock};
   const results = [];
