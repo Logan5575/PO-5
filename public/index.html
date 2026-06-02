@@ -177,6 +177,7 @@ function getProp(page, key) {
   if (!p) return null;
   if (p.type === 'title') return p.title.map(t=>t.plain_text).join('');
   if (p.type === 'rich_text') return p.rich_text.map(t=>t.plain_text).join('');
+  if (p.type === 'text') return p.rich_text?.map(t=>t.plain_text).join('') || null;
   if (p.type === 'number') return p.number;
   if (p.type === 'select') return p.select?.name || null;
   if (p.type === 'date') return p.date?.start || null;
@@ -226,7 +227,8 @@ async function reloadStock() {
     const allProdPages = await notionQuery(DB_PROD, null);
     const prodPages = allProdPages.filter(p => {
       const c = p.properties['색상_제품명'];
-      const val = c?.rich_text?.[0]?.plain_text || c?.title?.[0]?.plain_text || '';
+      if (!c) return false;
+      const val = (c.rich_text || c.title || []).map(t=>t.plain_text).join('').trim();
       return val === color;
     });
 
