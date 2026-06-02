@@ -131,12 +131,11 @@ table.tbl tr:hover td{background:var(--bg2)}
         <div id="existing-grid" class="size-grid"></div>
       </div>
       <div class="card">
-        <div class="section-label">금일 생산량 추가 입력</div>
+        <div class="section-label">누적 생산량 — Notion 일일생산 DB 자동 연동 <span id="prod-info" style="font-weight:400;color:var(--text3)"></span></div>
         <div id="prod-grid" class="size-grid"></div>
         <div class="btn-row">
           <button class="btn btn-primary" onclick="runAnalysis()">분석 실행 →</button>
           <button class="btn" onclick="reloadStock()">재고 새로고침 ↺</button>
-          <button class="btn" onclick="clearProd()">생산량 초기화</button>
         </div>
       </div>
     </div>
@@ -158,6 +157,7 @@ table.tbl tr:hover td{background:var(--bg2)}
 <script>
 const DB_PO    = '7cf548d1d20245e0a4c3547040c7524d';
 const DB_STOCK = '9161f893a3904ca094dfdb7fad9481f0';
+const DB_PROD  = '3d2bf74180774b40aeda57d930d4ff1d';
 const SIZES = ['3.5','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5','10','10.5','11','11.5','12','12.5','13','14'];
 
 // Vercel API 엔드포인트 (같은 도메인이므로 CORS 없음)
@@ -212,39 +212,72 @@ async function reloadStock() {
 
   let stockData = {};
   try {
+    // 재고 현황 DB 조회
     const pages = await notionQuery(DB_STOCK, {
       property: '색상_제품명',
       rich_text: {equals: color}
     });
 
     if (pages.length > 0) {
-      SIZES.forEach(s => {
-        stockData[s] = getProp(pages[0], s) || 0;
-      });
-      document.getElementById('m-color-sub').textContent = `Notion 재고 연동됨 ✓`;
-    } else {
-      document.getElementById('m-color-sub').textContent = '재고 DB에 데이터 없음 (수동 입력)';
+      SIZES.forEach(s => { stockData[s] = getProp(pages[0], s) || 0; });
     }
+
+    // 일일생산 DB 조회 - 색상_제품명 정확히 매칭, 전체 날짜 누적 합산
+    const prodPages = await notionQuery(DB_PROD, {
+      property: '색상_제품명',
+      rich_text: {equals: color}
+    });
+
+    let prodTotal = {};
+    let prodDates = new Set();
+    prodPages.forEach(p => {
+      SIZES.forEach(s => {
+        prodTotal[s] = (prodTotal[s] || 0) + (getProp(p, s) || 0);
+      });
+      const d = getProp(p, 'date:날짜:start') || getProp(p, '날짜');
+      if (d) prodDates.add(d.substring(0, 10));
+    });
+
+    // 재고 + 생산량 합산
+    const hasProd = prodPages.length > 0;
+    SIZES.forEach(s => { stockData[s] = (stockData[s] || 0) + (prodTotal[s] || 0); });
+
+    const prodInfo = hasProd
+      ? `재고 + 생산량 연동됨 ✓ (${prodPages.length}건)`
+      : `Notion 재고 연동됨 ✓`;
+    document.getElementById('m-color-sub').textContent =
+      pages.length > 0 ? prodInfo : '재고 DB에 데이터 없음 (수동 입력)';
+
+    renderInputGrids(stockData, hasProd ? prodTotal : null);
   } catch(e) {
     document.getElementById('m-color-sub').textContent = `연결 오류: ${e.message}`;
+    renderInputGrids(stockData);
   }
-
-  renderInputGrids(stockData);
 }
 
-function renderInputGrids(stockData) {
+function renderInputGrids(stockData, prodData) {
   document.getElementById('existing-grid').innerHTML =
     SIZES.map(s=>`
       <div class="size-cell">
         <div class="sz">${s}</div>
         <input type="number" id="ex-${s}" value="${stockData[s]||0}" min="0">
       </div>`).join('');
-  document.getElementById('prod-grid').innerHTML =
-    SIZES.map(s=>`
-      <div class="size-cell">
-        <div class="sz">${s}</div>
-        <input type="number" id="pr-${s}" value="0" min="0">
-      </div>`).join('');
+  // 생산량은 읽기전용으로 표시
+  if (prodData) {
+    document.getElementById('prod-grid').innerHTML =
+      SIZES.map(s=>`
+        <div class="size-cell">
+          <div class="sz">${s}</div>
+          <input type="number" id="pr-${s}" value="${prodData[s]||0}" min="0" readonly style="color:var(--text3)">
+        </div>`).join('');
+  } else {
+    document.getElementById('prod-grid').innerHTML =
+      SIZES.map(s=>`
+        <div class="size-cell">
+          <div class="sz">${s}</div>
+          <input type="number" id="pr-${s}" value="0" min="0">
+        </div>`).join('');
+  }
 }
 
 function clearProd() {
