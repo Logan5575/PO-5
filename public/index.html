@@ -351,18 +351,33 @@ async function runAnalysis() {
     return;
   }
 
+  const prioOrder = {'PRIO 1':1,'PRIO 2':2,'PRIO 3':3};
   const pos = pages.map(p => {
     const obj = {
-      po:     getProp(p,'PO번호'),
-      dest:   getProp(p,'목적지'),
-      date:   getProp(p,'Ship Date'),
-      status: getProp(p,'PO상태'),
-      qty:    getProp(p,'총수량') || 0,
+      po:       getProp(p,'PO번호'),
+      dest:     getProp(p,'목적지'),
+      date:     getProp(p,'Ship Date'),
+      status:   getProp(p,'PO상태'),
+      qty:      getProp(p,'총수량') || 0,
+      priority: getProp(p,'우선순위') || '',
+      aql_note: getProp(p,'_비고') || '',
     };
     SIZES.forEach(s => { obj[s] = getProp(p, s) || 0; });
     return obj;
   }).filter(p => p.po && p.date)
-    .sort((a,b) => a.date.localeCompare(b.date));
+    .sort((a,b) => {
+      // 1순위: Ship Date
+      const dateDiff = a.date.localeCompare(b.date);
+      if (dateDiff !== 0) return dateDiff;
+      // 2순위: Priority
+      const pa = prioOrder[a.priority] || 99;
+      const pb = prioOrder[b.priority] || 99;
+      if (pa !== pb) return pa - pb;
+      // 3순위: AQL No (비고에서 숫자 추출)
+      const aqlA = parseInt(a.aql_note.replace('AQL#','')) || 999;
+      const aqlB = parseInt(b.aql_note.replace('AQL#','')) || 999;
+      return aqlA - aqlB;
+    });
 
   document.getElementById('m-po-total').textContent = pos.length;
 
@@ -438,9 +453,15 @@ function renderResults(results, color, covered, total) {
       ? `<span class="badge badge-partial">△ 부분</span>`
       : `<span class="badge badge-no">✕ 불가</span>`;
 
+    const prioColor = po.priority==='PRIO 1' ? '#a32d2d' : po.priority==='PRIO 2' ? '#854f0b' : po.priority==='PRIO 3' ? '#3b5d11' : '#555';
+    const prioBg = po.priority==='PRIO 1' ? '#fcebeb' : po.priority==='PRIO 2' ? '#faeeda' : po.priority==='PRIO 3' ? '#eaf3de' : '#f0f0f0';
+    const prioBadge = po.priority ? `<span style="font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600;background:${prioBg};color:${prioColor}">${po.priority}</span>` : '';
+    const aqlBadge = po.aql_note ? `<span style="font-size:11px;color:var(--text3);padding:2px 6px;background:var(--bg2);border-radius:4px">${po.aql_note}</span>` : '';
     html += `<div class="po-card">
       <div class="po-card-header">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${prioBadge}
+          ${aqlBadge}
           <span class="mono">${po.po||''}</span>
           <span style="font-size:12px;color:var(--text2)">${po.dest||''}</span>
           <span style="font-size:12px;color:var(--text2)">${po.date||''}</span>
