@@ -246,9 +246,15 @@ async function reloadStock() {
     const hasProd = prodPages.length > 0;
     SIZES.forEach(s => { stockData[s] = (stockData[s] || 0) + (prodTotal[s] || 0); });
 
+    // 디버그: 첫 행의 색상_제품명 실제값 확인
+    const debugSample = allProdPages.slice(0,2).map(p => {
+      const c = p.properties['색상_제품명'];
+      return `[type:${c?.type} val:"${(c?.rich_text||c?.title||[]).map(t=>t.plain_text).join('')}"]`;
+    }).join(' ');
+    
     const prodInfo = hasProd
       ? `재고 + 생산량 연동됨 ✓ (${prodPages.length}건)`
-      : `Notion 재고 연동됨 ✓`;
+      : `생산DB ${allProdPages.length}건조회, 매칭0 | ${debugSample}`;
     document.getElementById('m-color-sub').textContent =
       pages.length > 0 ? prodInfo : '재고 DB에 데이터 없음 (수동 입력)';
 
