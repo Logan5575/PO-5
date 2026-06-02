@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Priority 업데이트</title>
+<style>
+body{font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto}
+.log{background:#f5f5f5;padding:10px;border-radius:8px;height:400px;overflow-y:auto;font-size:12px;margin-top:10px}
+button{padding:10px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+button:disabled{opacity:0.5}
+.ok{color:green}.err{color:red}.info{color:#666}
+</style>
+</head>
+<body>
+<h2>PO Priority 일괄 업데이트</h2>
+<p>총 41건의 PO에 Priority와 AQL No를 입력합니다.</p>
+<button id="btn" onclick="run()">업데이트 시작</button>
+<div class="log" id="log"></div>
+<script>
+const PO_DATA = [{"po": "PO380000006", "priority": "PRIO 1", "aql_no": 1}, {"po": "PO380033914", "priority": "PRIO 1", "aql_no": 1}, {"po": "PO38OM000143", "priority": "PRIO 1", "aql_no": 2}, {"po": "PO380000008", "priority": "PRIO 1", "aql_no": 2}, {"po": "PO380000010", "priority": "PRIO 1", "aql_no": 2}, {"po": "PO38OM000004", "priority": "PRIO 1", "aql_no": 2}, {"po": "PO380000011", "priority": "PRIO 1", "aql_no": 3}, {"po": "PO380044660", "priority": "PRIO 1", "aql_no": 4}, {"po": "PO380006777", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO380006780", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO380014780", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO380014814", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO38OM000146", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO380014785", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO38OM000700", "priority": "PRIO 1", "aql_no": 5}, {"po": "PO380014782", "priority": "PRIO 1", "aql_no": 6}, {"po": "PO380014792", "priority": "PRIO 1", "aql_no": 7}, {"po": "PO380014793", "priority": "PRIO 1", "aql_no": 8}, {"po": "PO380015098", "priority": "PRIO 1", "aql_no": 9}, {"po": "PO38OM000145", "priority": "PRIO 1", "aql_no": 10}, {"po": "PO380000506", "priority": "PRIO 2", "aql_no": 11}, {"po": "PO38OM000005", "priority": "PRIO 2", "aql_no": 11}, {"po": "PO38OM000141", "priority": "PRIO 2", "aql_no": 11}, {"po": "PO380000510", "priority": "PRIO 2", "aql_no": 11}, {"po": "PO380000512", "priority": "PRIO 2", "aql_no": 11}, {"po": "PO380006778", "priority": "PRIO 2", "aql_no": 12}, {"po": "PO380006782", "priority": "PRIO 2", "aql_no": 12}, {"po": "PO380006774", "priority": "PRIO 2", "aql_no": 12}, {"po": "PO38OM000144", "priority": "PRIO 2", "aql_no": 12}, {"po": "PO380014784", "priority": "PRIO 2", "aql_no": 12}, {"po": "PO380014781", "priority": "PRIO 2", "aql_no": 12}, {"po": "PO380000513", "priority": "PRIO 2", "aql_no": 13}, {"po": "PO380000508", "priority": "PRIO 2", "aql_no": 14}, {"po": "PO380000511", "priority": "PRIO 2", "aql_no": 15}, {"po": "PO38OM000142", "priority": "PRIO 2", "aql_no": 16}, {"po": "PO380006781", "priority": "PRIO 2", "aql_no": 17}, {"po": "PO380006775", "priority": "PRIO 2", "aql_no": 18}, {"po": "PO380006776", "priority": "PRIO 2", "aql_no": 19}, {"po": "PO380044661", "priority": "PRIO 2", "aql_no": 20}, {"po": "PO38OM000702", "priority": "PRIO 3", "aql_no": 24}, {"po": "PO38OM000701", "priority": "PRIO 3", "aql_no": 25}];
+const DB_ID = '7cf548d1d20245e0a4c3547040c7524d';
+
+function log(msg, cls='info') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function queryPO(poNum) {
+  const res = await fetch('/api/notion.js', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      dbId: DB_ID,
+      filter: {property: 'PO번호', title: {equals: poNum}}
+    })
+  });
+  const data = await res.json();
+  return data.results || [];
+}
+
+async function updatePage(pageId, priority, aqlNo) {
+  const res = await fetch('/api/notion.js', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      action: 'update',
+      pageId,
+      properties: {
+        '우선순위': {select: {name: priority}},
+        '_비고': {rich_text: [{text: {content: 'AQL#' + aqlNo}}]}
+      }
+    })
+  });
+  return res.json();
+}
+
+async function run() {
+  document.getElementById('btn').disabled = true;
+  log('업데이트 시작...', 'info');
+  let success = 0, fail = 0;
+  
+  for (const item of PO_DATA) {
+    try {
+      const pages = await queryPO(item.po);
+      if (pages.length === 0) {
+        log(`❌ ${item.po} — DB에서 찾을 수 없음`, 'err');
+        fail++;
+        continue;
+      }
+      for (const page of pages) {
+        await updatePage(page.id, item.priority, item.aql_no);
+      }
+      log(`✓ ${item.po} → ${item.priority} / AQL#${item.aql_no} (${pages.length}건)`, 'ok');
+      success++;
+    } catch(e) {
+      log(`❌ ${item.po} — ${e.message}`, 'err');
+      fail++;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  
+  log(`완료! 성공: ${success}, 실패: ${fail}`, 'info');
+  document.getElementById('btn').disabled = false;
+}
+</script>
+</body>
+</html>
