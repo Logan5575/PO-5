@@ -408,6 +408,13 @@ async function runAnalysis() {
     } else {
       const hasAny = SIZES.some(s => (po[s]||0) > 0 && rem[s] > 0);
       status = hasAny ? 'partial' : 'none';
+      // 부분 커버도 사이즈별로 커버된 만큼 차감
+      SIZES.forEach(s => {
+        const need = po[s] || 0;
+        if (!need) return;
+        const deduct = Math.min(need, Math.max(0, rem[s]));
+        rem[s] = Math.max(0, rem[s] - deduct);
+      });
     }
     results.push({po, status, deficit, sizeStatus});
   });
